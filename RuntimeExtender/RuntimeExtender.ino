@@ -5,13 +5,13 @@
 #include <avr/interrupt.h>
 
 // Configuration
-const byte displayDigitPins[] = {1, 1, 1};
-const byte displaySegmentPins[] = {1, 1, 1, 1, 1, 1, 1, 1};
+const byte displayDigitPins[] = {A5, A4, A3};
+const byte displaySegmentPins[] = {A2, A0, 6,4, 3, A1, 7, 5};
 
-const byte increaseDelayPin = 1;
-const byte decreaseDelayPin = 1;
-const byte sensorPin = 1;
-const byte relayPin = 1;
+const byte increaseDelayPin = 10;
+const byte decreaseDelayPin = 11;
+const byte sensorPin = 12;
+const byte relayPin = 9;
 
 #define BUTTON_DEBOUNCE_DELAY_MS 10
 #define SENSOR_DEBOUNCE_DELAY_MS 500
@@ -39,9 +39,9 @@ enum State {
   RunDelay,
 }
 #if TEST_DURATION_MS > 0
-state = State::Test;
+systemState = State::Test;
 #else
-state = State::Idle;
+systemState = State::Idle;
 #endif
 
 SevSeg display;
@@ -96,21 +96,21 @@ void setup()
 
 void loop()
 {
-  if (state != Test && sensor.state() == LOW)
+  if (systemState != Test && sensor.state() == LOW)
   {
     lastEvent = millis();
     digitalWrite(relayPin, HIGH);
-    state = Run;
+    systemState = Run;
   }
   
-  switch (state)
+  switch (systemState)
   {
     case Test:
     {
       display.setChars("tst");
       if (millis() - lastEvent > 2000 + TEST_DURATION_MS)
       {
-        state = Idle;
+        systemState = Idle;
         lastEvent = millis();
       }
       else if (millis() - lastEvent > 1000 + TEST_DURATION_MS)
@@ -139,7 +139,7 @@ void loop()
       if (millis() - lastEvent > ADJUST_WAIT_TIME_MS)
       {
         lastEvent = millis();
-        state = Idle;
+        systemState = Idle;
       }
     }
     break;
@@ -149,7 +149,7 @@ void loop()
       if (sensor.state() == HIGH)
       {
         lastEvent = millis();
-        state = RunDelay;
+        systemState = RunDelay;
       }
     }
     break;
@@ -161,13 +161,13 @@ void loop()
       {
         // Sensor came back on.
         lastEvent = millis();
-        state = Run;
+        systemState = Run;
       }
       else if (timeSinceSensorOff_ms > runDelayTime_ms)
       {
         lastEvent = millis();
         digitalWrite(relayPin, LOW);
-        state = Idle;
+        systemState = Idle;
       }
     }
     break;
@@ -181,16 +181,16 @@ void loop()
 
 void IncreaseButtonHandler(int buttonState)
 {
-  if (buttonState != LOW || (state != Idle && state != AdjustDelay))
+  if (buttonState != LOW || (systemState != Idle && systemState != AdjustDelay))
   {
     return;
   }
 
   lastEvent = millis();
   
-  if (state == Idle)
+  if (systemState == Idle)
   {
-    state == AdjustDelay;
+    systemState = AdjustDelay;
     return;
   }
 
@@ -207,16 +207,16 @@ void IncreaseButtonHandler(int buttonState)
 
 void DecreaseButtonHandler(int buttonState)
 {
-  if (buttonState != LOW || (state != Idle && state != AdjustDelay))
+  if (buttonState != LOW || (systemState != Idle && systemState != AdjustDelay))
   {
     return;
   }
 
   lastEvent = millis();
   
-  if (state == Idle)
+  if (systemState == Idle)
   {
-    state == AdjustDelay;
+    systemState = AdjustDelay;
     return;
   }
 
